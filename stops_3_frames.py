@@ -3,10 +3,10 @@ from Bio import SeqIO
 from PIL import Image, ImageDraw, ImageFont
 
 
-Stops = set(["TAA", "TAG", "TGA"])
+Stops = set(["TAA", "TAG", "TGA", "taa", "tag", "tga"])
 Colors = ["Red", "Green", "Blue"]
 
-Starts = set(["ATG"])
+Starts = set(["ATG", "atg"])
 StartColor = ["peru"]
 GapColor = "Gray"
 ORFColor = "steelblue"
