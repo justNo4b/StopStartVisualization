@@ -30,7 +30,7 @@ PaddingTop = 100
 PaddingBottom = 100
 PaddingBetween = 80
 
-PanelOverhang = 50
+PanelOverhang = 70
 TickSize  = 10
 DotSize = 3
 
@@ -38,11 +38,16 @@ DpiUsed = 300
 
 ORFWidth = 20
 
+LabelX = "Alignment coordinate (nt)"
+DefaultImageLabel = "Visualization of the stop codons in the alignment"
+
+
 
 ## Enter ORF in the format of:
 ##  FRAME_IN_ALN..START...END...TEXT
+## Frames starts from 0 (0 -> +1, 1 -> +2, 2 -> +3)
 ## Example: "0..1..100..Example"
-PredictedOrfPositions = ["0..160..849..NorwaORF", "0..862..2520..Nucleoprotein"]
+PredictedOrfPositions = ["0..160..849..norwaORF", "0..862..2520..Nucleoprotein"]
 
 ##############################################
 # Fetching data
@@ -80,6 +85,31 @@ def _drawRotatedText(canvas, angle, coord, text, font):
 def _orfYCoord(frame):
     return PaddingTop + frame * SequenceCount * DotSize + PaddingBetween * (frame + 0.5)
 
+def _setLabelsRu(addrussian):
+    global LabelX
+    global ImageLabel
+    if (addrussian):
+        LabelX += " | Координата выравнивания (нт) "
+        if (ImageLabel == DefaultImageLabel):
+            ImageLabel += " | Визуализация стоп-кодонов в выравнивании"
+    return
+
+def _setLabelsORFRu(frame, addrussian):
+    s = "No ORFs predicted in Frame +"
+    s += str(frame)
+    if (addrussian):
+        s += " | Нет предсказанных ОРС в рамке считывания +"
+        s += str(frame)
+    return s
+
+def _setLabelsPanel(frame, addrussian):
+    s = "Frame +"
+    s += str(frame)
+    if (addrussian):
+        s += "\nРамка\nсчитывания\n+"
+        s += str(frame)
+    return s
+
 
 ## Drawing suggested ORF
 ## Draw according to alignment coordinates provided.
@@ -104,7 +134,7 @@ def _drawORFs(drawObj):
     for i in range(0, 3):
         if (not containsorf[i]):
             y_coord = _orfYCoord(i) - 25
-            Vizualization.text((TripletsAmount * DotSize / 2, y_coord), "No ORFs predicted in Frame +" + str(i + 1), fill="Black", font=YLabelFont, anchor="la")
+            Vizualization.text((PaddingLeft + TripletsAmount * DotSize / 2, y_coord), _setLabelsORFRu(i + 1, Lang_Ru), fill="Black", font=YLabelFont, anchor="ma")
 
     return
 
@@ -114,11 +144,12 @@ def _drawORFs(drawObj):
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input", type=str, help="Input file. Expected to be a proper alignment", required=True)
 parser.add_argument("-o", "--output", type=str, help="Name of the output file. Expected to end in .png")
-parser.add_argument("-l", "--label", type=str, default="Visualization of the stop codons in the alignment", help="Image label")
+parser.add_argument("-l", "--label", type=str, default=DefaultImageLabel, help="Image label")
 parser.add_argument("-font", "--font", type=str, help="Custom font file to use")
 parser.add_argument("-stop", "--stops", action="store_true", help="Visualize stops in alignment", default=False)
 parser.add_argument("-start", "--starts", action="store_true", help="Visualize starts in alignment", default=False)
 parser.add_argument("-gap", "--gaps", action="store_true", help="Visualize gaps in alignment", default=False)
+parser.add_argument("-ru", "--russian", action="store_true", help="Add Russian labels", default=False)
 
 FileName = parser.parse_args().input
 if (parser.parse_args().font != None): FontFile = parser.parse_args().font
@@ -128,7 +159,14 @@ if (parser.parse_args().output != None):
 else:
     OutFileName = FileName + ".output.tiff"
 
+
+Lang_Ru = parser.parse_args().russian
 ImageLabel = parser.parse_args().label
+
+
+###############################################
+# Set labels with language
+_setLabelsRu(Lang_Ru)
 
 
 ###############################################
@@ -136,15 +174,22 @@ ImageLabel = parser.parse_args().label
 DrawStops = parser.parse_args().stops
 DrawStarts = parser.parse_args().starts
 DrawGaps = parser.parse_args().gaps
+
+YRotLabel = ""
+YRotLabelRu = ""
 if (DrawStops):
     YRotLabel = "In-frame stops in each sequence"
+    YRotLabelRu = "Стоп-кодоны в рамке считывания"
 elif(DrawGaps):
     YRotLabel = "In-frame gaps in each sequence"
+    YRotLabelRu = "Гэпы в кодонах в рамке считывания"
 elif(DrawStarts):
     YRotLabel = "In-frame starts in each sequence"
+    YRotLabelRu = "Старт-кодоны в рамке считывания"
 if (not DrawGaps and not DrawStarts and not DrawStops):
     DrawStops = True
     YRotLabel = "In-frame stops in each sequence"
+    YRotLabelRu = "Стоп-кодоны в рамке считывания"
 
 SequenceCount = _seqUploader(FileName)
 print(SequenceCount)
@@ -165,7 +210,9 @@ XEndCoordinate = XSize - PaddingRight + DotSize
 YEndCoordinate = YSize - PaddingBottom
 
 YLabelFont    = ImageFont.truetype(FontFile, YLabelFontSize)
+YLabelFontRu    = ImageFont.truetype(FontFile, YLabelFontSize - 7)
 YLabelFontSmall = ImageFont.truetype(FontFile, YLabelFontSmallSize)
+YLabelFontSmallRu = ImageFont.truetype(FontFile, YLabelFontSmallSize - 3)
 HeaderFont    = ImageFont.truetype(FontFile, HeaderFontSize)
 ProteinFont    = ImageFont.truetype(FontFile, ProteinFontSize)
 
@@ -198,21 +245,28 @@ for i in range(0, len(DataHolder[0]), 500):
     Vizualization.line((x_coord, y1_coord, x_coord, y2_coord), "Black", DotSize * 2)
     Vizualization.text((x_coord, y2_coord + 5), str(i), fill="Black", font=YLabelFont, anchor="la")
 
-Vizualization.text((TripletsAmount * DotSize / 2, y2_coord + 35), "Alignment coordinate (nt)", fill="Black", font=YLabelFont, anchor="la")
+Vizualization.text((PaddingLeft + TripletsAmount * DotSize / 2, y2_coord + 35), LabelX, fill="Black", font=YLabelFont, anchor="ma")
 
 ###############################################
 ## Draw Y labels
 for i in range(0, 3):
-    x_coord = 40
+    x_coord = PaddingLeft / 2 - 20
     rot_x_coord = XStartCoordinate - 40
+    rot_x_coord_ru = rot_x_coord
+    if (Lang_Ru): rot_x_coord -= 30
     y_coord = int(YStartCoordinate + PaddingBetween * i + SequenceCount * DotSize * (i * 2 + 1) / 2)
+    y_rot_coord0 = y_coord - 40
     y_rot_coord1 = y_coord - 80
     y_rot_coord2 = YStartCoordinate + SequenceCount * DotSize * i + PaddingBetween * i + 10
-    Vizualization.text((x_coord, y_coord), "Frame +" + str(i + 1), fill="Black", font=YLabelFont, anchor="la")
+    
+    _drawRotatedText(Canvas, 90, (int(x_coord), y_rot_coord0), "Frame +" + str(i + 1), YLabelFont)
     _drawRotatedText(Canvas, 90, (rot_x_coord, y_rot_coord1), YRotLabel, YLabelFontSmall)
     _drawRotatedText(Canvas, 90, (rot_x_coord, y_rot_coord2), "ORFs", YLabelFontSmall)
-
-Vizualization.text((XSize / 2 - 500, 15), ImageLabel, fill="Black", font=HeaderFont, anchor="la")
+    if (Lang_Ru):
+        _drawRotatedText(Canvas, 90, (rot_x_coord_ru, y_rot_coord2), "OPC", YLabelFontSmall)
+        _drawRotatedText(Canvas, 90, (rot_x_coord_ru, y_rot_coord1), YRotLabelRu, YLabelFontSmallRu)
+        _drawRotatedText(Canvas, 90, (int(x_coord - 40), y_rot_coord1), "Рамка считывания +" + str(i + 1), YLabelFontRu)
+Vizualization.text((XSize / 2, 15), ImageLabel, fill="Black", font=HeaderFont, anchor="ma")
 
 
 
